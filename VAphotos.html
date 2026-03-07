@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VAphotos航空图库</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Microsoft YaHei,sans-serif}
+body{background:#fafafa;color:#333}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);display:flex;justify-content:center;align-items:center;z-index:999}
+.modal-box{background:#fff;padding:30px;border-radius:12px;width:380px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+.modal-box h2{margin-bottom:20px;text-align:center}
+.form-item{margin-bottom:15px}
+.form-item input,.form-item textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px}
+.btn{width:100%;padding:10px;background:#2d6cdf;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-top:10px}
+.link{text-align:center;margin-top:10px;font-size:14px;color:#2d6cdf;cursor:pointer}
+header{background:#0d47a1;color:#fff;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:90}
+.logo{font-size:20px;font-weight:bold}
+.nav-tabs{display:flex;gap:18px}
+.nav-tabs a{color:#fff;text-decoration:none;cursor:pointer}
+.stats-panel{background:#fff;padding:16px 24px;border-radius:12px;max-width:800px;margin:20px auto;display:flex;justify-content:space-around;text-align:center}
+.stats-value{font-size:18px;font-weight:bold;color:#0d47a1}
+.container{max-width:1200px;margin:0 auto;padding:0 20px}
+.upload{background:#fff;padding:28px;border-radius:12px;margin-bottom:30px}
+.masonry{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:24px}
+.card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.img-box{position:relative}
+.card img{width:100%;display:block}
+.watermark{position:absolute;bottom:12px;right:12px;color:rgba(255,255,255,.9);font-size:16px;font-weight:bold;text-shadow:0 0 5px #000;pointer-events:none}
+.info{padding:14px}
+.reject-reason{font-size:12px;color:#c53030;background:#fff1f0;padding:4px;border-radius:4px;margin-top:4px}
+.status{padding:3px 8px;border-radius:4px;font-size:12px;display:inline-block;margin-top:6px}
+.wait{background:#fff4e5;color:#d48060}
+.pass{background:#e6ffed;color:#279443}
+.reject{background:#fff1f0;color:#c53030}
+.admin-btn{display:flex;gap:8px;margin-top:10px}
+.pass-btn{background:#279443;color:#fff;border:none;padding:6px;flex:1;border-radius:4px}
+.reject-btn{background:#c53030;color:#fff;border:none;padding:6px;flex:1;border-radius:4px}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+
+<div id="loginModal" class="modal">
+<div class="modal-box">
+<h2>登录</h2>
+<div class="form-item"><input type="text" id="loginUser" placeholder="用户名"></div>
+<div class="form-item"><input type="email" id="loginEmail" placeholder="邮箱"></div>
+<div class="form-item"><input type="password" id="loginPwd" placeholder="密码"></div>
+<button class="btn" onclick="login()">登录</button>
+<div class="link" onclick="goRegister()">去注册</div>
+</div>
+</div>
+
+<div id="registerModal" class="modal hide">
+<div class="modal-box">
+<h2>注册</h2>
+<div class="form-item"><input type="text" id="regUser" placeholder="用户名"></div>
+<div class="form-item"><input type="email" id="regEmail" placeholder="邮箱"></div>
+<div class="form-item"><input type="password" id="regPwd" placeholder="密码"></div>
+<button class="btn" onclick="register()">注册</button>
+<div class="link" onclick="goLogin()">返回登录</div>
+</div>
+</div>
+
+<div id="rejectModal" class="modal hide">
+<div class="modal-box">
+<h2>拒绝理由</h2>
+<textarea id="rejectReason" placeholder="请输入拒绝理由" style="width:100%;height:80px"></textarea>
+<button class="btn" onclick="submitReject()">确认拒绝</button>
+</div>
+</div>
+
+<header class="hide" id="header">
+<div class="logo">VAphotos航空图库</div>
+<div class="nav-tabs">
+<a onclick="showTab('home')">首页</a >
+<a onclick="showTab('upload')">上传</a >
+<a onclick="showTab('my')">我的作品</a >
+<a onclick="showTab('audit')" id="auditTab" class="hide">审核</a >
+<a onclick="logout()">退出</a >
+</div>
+</header>
+
+<div class="container hide" id="container">
+<div class="stats-panel">
+<div>
+<div>总注册人数</div>
+<div class="stats-value" id="regCount">0</div>
+</div>
+<div>
+<div>在线审核员</div>
+<div class="stats-value" id="adminList">-</div>
+</div>
+</div>
+
+<div id="uploadSection" class="hide">
+<div class="upload">
+<h3>上传作品</h3>
+<input id="imgTitle" placeholder="作品标题" style="width:100%;margin-bottom:10px;padding:8px">
+<textarea id="imgDesc" placeholder="作品描述" style="width:100%;margin-bottom:10px;height:80px;padding:8px"></textarea>
+<input type="file" id="fileInput" multiple accept="image/*">
+<button class="btn" onclick="uploadImg()" style="margin-top:10px">提交上传</button>
+</div>
+</div>
+
+<div id="homeSection"><div class="masonry" id="showList"></div></div>
+<div id="mySection" class="hide"><div class="masonry" id="myImgs"></div></div>
+<div id="auditSection" class="hide"><div class="masonry" id="auditList"></div></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAuznKCqZpYT-G0kRkE2aG1lQHlYDY0z0A",
+  authDomain: "va-photos.firebaseapp.com",
+  databaseURL: "https://va-photos-default-rtdb.firebaseio.com",
+  projectId: "va-photos",
+  storageBucket: "va-photos.appspot.com",
+  messagingSenderId: "668666986361",
+  appId: "1:668666986361:web:2a100db0f5c5a1c3b3a058"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let userNow = null;
+let currentRejectIndex = null;
+let images = [];
+
+init();
+function init() {
+  initDefaultUsers();
+  listenImageChange();
+  render();
+}
+
+function initDefaultUsers() {
+  db.ref("users").once("value").then(snap => {
+    if (!snap.exists()) {
+      db.ref("users").set([
+        { user: "admin", email: "admin@va.com", pwd: "admin123", role: "super", auth: "pass" },
+        { user: "Aviation VALE", email: "282829039@qq.com", pwd: "lkz20120122", role: "admin", auth: "pass" }
+      ]);
+    }
+  });
+}
+
+function listenImageChange() {
+  db.ref("images").on("value", snap => {
+    images = snap.val() || [];
+    refreshAllPages();
+  });
+}
+
+function refreshAllPages() {
+  updateStats();
+  renderList("showList", images.filter(x => x.status === "pass"));
+  renderList("myImgs", images.filter(x => x.user === userNow?.user));
+  renderList("auditList", images.filter(x => x.status === "wait"));
+}
+
+function updateStats() {
+  db.ref("users").once("value").then(snap => {
+    const users = snap.val() || [];
+    document.getElementById("regCount").textContent = users.length;
+    const admins = users.filter(u => u.auth === "pass").map(u => u.user);
+    document.getElementById("adminList").textContent = admins.join("、") || "暂无";
+  });
+}
+
+function login() {
+  const user = document.getElementById("loginUser").value;
+  const email = document.getElementById("loginEmail").value;
+  const pwd = document.getElementById("loginPwd").value;
+  if(!email){alert("请输入邮箱");return;}
+  db.ref("users").once("value").then(snap => {
+    const list = snap.val() || [];
+    const u = list.find(x => x.user === user && x.email === email && x.pwd === pwd);
+    if (!u) return alert("账号、邮箱或密码错误");
+    userNow = u;
+    render();
+  });
+}
+
+function register() {
+  const user = document.getElementById("regUser").value;
+  const email = document.getElementById("regEmail").value;
+  const pwd = document.getElementById("regPwd").value;
+  if (!user || !email || !pwd) return alert("请填写完整");
+  db.ref("users").once("value").then(snap => {
+    const list = snap.val() || [];
+    if (list.find(x => x.user === user)) return alert("用户名已存在");
+    if (list.find(x => x.email === email)) return alert("邮箱已被注册");
+    list.push({ user, email, pwd, role: "user", auth: "none" });
+    db.ref("users").set(list).then(() => {
+      alert("注册成功！请登录");
+      goLogin();
+    });
+  });
+}
+
+function uploadImg() {
+  const file = document.getElementById("fileInput").files[0];
+  if (!file) return alert("请选择图片");
+  const reader = new FileReader();
+  reader.onload = e => {
+    images.push({
+      user: userNow.user,
+      url: e.target.result,
+      title: document.getElementById("imgTitle").value || "无标题",
+      desc: document.getElementById("imgDesc").value || "无描述",
+      status: "wait",
+      reason: "",
+      time: new Date().toLocaleString()
+    });
+    db.ref("images").set(images).then(() => {
+      alert("上传成功，等待审核");
+      document.getElementById("imgTitle").value = "";
+      document.getElementById("imgDesc").value = "";
+      document.getElementById("fileInput").value = "";
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function auditImg(index, status) {
+  if (status === "pass") {
+    images[index].status = "pass";
+    images[index].reason = "";
+    db.ref("images").set(images);
+  } else {
+    currentRejectIndex = index;
+    document.getElementById("rejectModal").classList.remove("hide");
+  }
+}
+
+function submitReject() {
+  const r = document.getElementById("rejectReason").value.trim();
+  if (!r) return alert("请填写拒绝理由");
+  images[currentRejectIndex].status = "reject";
+  images[currentRejectIndex].reason = r;
+  db.ref("images").set(images);
+  document.getElementById("rejectModal").classList.add("hide");
+}
+
+function renderList(elId, list) {
+  const dom = document.getElementById(elId);
+  dom.innerHTML = list.map((item, i) => `
+  <div class="card">
+    <div class="img-box">
+      < img src="${item.url}">
+      <div class="watermark">VAphotos</div>
+    </div>
+    <div class="info">
+      <div><b>${item.title}</b></div>
+      <div style="font-size:14px;color:#666;margin:4px 0;">${item.desc}</div>
+      <div class="status ${item.status}">
+        ${item.status === "wait" ? "待审核" : item.status === "pass" ? "已通过" : "已拒绝"}
+      </div>
+      ${item.reason ? `<div class="reject-reason">${item.reason}</div>` : ""}
+      <div style="font-size:12px;color:#999;margin-top:6px;">${item.time}</div>
+      ${userNow?.auth === "pass" && item.status === "wait" ? `
+      <div class="admin-btn">
+        <button class="pass-btn" onclick="auditImg(${i},'pass')">通过</button>
+        <button class="reject-btn" onclick="auditImg(${i},'reject')">拒绝</button>
+      </div>` : ""}
+    </div>
+  </div>`).join("");
+}
+
+function render() {
+  if (!userNow) {
+    document.getElementById("header").classList.add("hide");
+    document.getElementById("container").classList.add("hide");
+    return;
+  }
+  document.getElementById("header").classList.remove("hide");
+  document.getElementById("container").classList.remove("hide");
+  document.getElementById("auditTab").classList.toggle("hide", userNow.auth !== "pass");
+  refreshAllPages();
+  showTab("home");
+}
+
+function showTab(t) {
+  document.getElementById("homeSection").classList.add("hide");
+  document.getElementById("uploadSection").classList.add("hide");
+  document.getElementById("mySection").classList.add("hide");
+  document.getElementById("auditSection").classList.add("hide");
+  if (t === "home") homeSection.classList.remove("hide");
+  if (t === "upload") uploadSection.classList.remove("hide");
+  if (t === "my") mySection.classList.remove("hide");
+  if (t === "audit") auditSection.classList.remove("hide");
+}
+
+function logout() {
+  userNow = null;
+  render();
+}
+
+function goRegister() {
+  loginModal.classList.add("hide");
+  registerModal.classList.remove("hide");
+}
+function goLogin() {
+  registerModal.classList.add("hide");
+  loginModal.classList.remove("hide");
+}
+</script>
+</body>
+</html>
